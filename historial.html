@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VapeHouse — Historial</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .tag-VENTA { color: #10B981; }
+        .tag-ENTRADA { color: #3B82F6; }
+        .tag-INGRESO { color: #8B5CF6; }
+        .tag-ELIMINACION { color: #EF4444; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="brand">VAPEHOUSE <span>Historial de Movimientos</span></div>
+        <div class="user-info"><span>📋 Registro completo de operaciones</span></div>
+    </div>
+
+    <div class="content">
+        <div class="table-container" style="max-height:550px;overflow-y:auto">
+            <table>
+                <thead><tr><th>Fecha / Hora</th><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Detalle</th></tr></thead>
+                <tbody id="tabla-historial"></tbody>
+            </table>
+        </div>
+
+        <div class="btn-group mt-2">
+            <button class="btn btn-danger" onclick="limpiarHistorial()">🗑 Limpiar Historial</button>
+            <button class="btn btn-ghost" onclick="ir('/dashboard.html')">← Volver</button>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        async function cargarHistorial() {
+            const datos = await get("/api/historial");
+            const tbody = document.getElementById("tabla-historial");
+            tbody.innerHTML = datos.map(h => {
+                let cls = "tag-" + h.tipo_mov.toUpperCase().replace(" ", "_");
+                return `<tr><td>${h.fecha}</td><td>${h.producto}</td><td class="${cls}">${h.tipo_mov}</td><td>${h.cantidad_mov}</td><td>${h.detalle}</td></tr>`;
+            }).join("") || '<tr><td colspan="5" class="text-muted">Sin movimientos</td></tr>';
+        }
+
+        async function limpiarHistorial() {
+            if (!confirmar("¿Desea limpiar todo el historial de movimientos?")) return;
+            await del("/api/historial");
+            cargarHistorial();
+            mostrar("Historial limpiado.", "success");
+        }
+
+        cargarHistorial();
+    </script>
+</body>
+</html>

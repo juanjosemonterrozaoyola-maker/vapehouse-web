@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VapeHouse — Análisis BI</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="brand">VAPEHOUSE <span>Análisis estratégico y recomendaciones</span></div>
+        <div class="user-info"><span>📊 Inteligencia de Negocios</span></div>
+    </div>
+
+    <div class="content">
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('rendimiento')">📈 Rendimiento</button>
+            <button class="nav-tab" onclick="switchTab('estrella')">⭐ Productos Estrella</button>
+            <button class="nav-tab" onclick="switchTab('recomendaciones')">🤖 Recomendaciones</button>
+        </div>
+
+        <!-- RENDIMIENTO -->
+        <div class="tab-content active" id="tab-rendimiento">
+            <div class="kpi-grid" id="kpi-rendimiento"></div>
+            <div class="section-label">Detalle diario — últimos 30 días</div>
+            <div class="table-container" style="max-height:400px;overflow-y:auto">
+                <table>
+                    <thead><tr><th>Fecha</th><th># Ventas</th><th>Unidades</th><th>Ganancia Total</th><th>Ticket Promedio</th></tr></thead>
+                    <tbody id="tabla-rendimiento"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PRODUCTOS ESTRELLA -->
+        <div class="tab-content" id="tab-estrella">
+            <div class="flex-between mb-2">
+                <h3>Ranking de productos por rendimiento</h3>
+                <div class="form-group" style="flex-direction:row;gap:6px">
+                    <label style="margin:0">Periodo:</label>
+                    <select id="periodo-estrella" onchange="cargarEstrella()" style="background:#1C2537;border:1px solid #1E3050;color:#F0F4FF;padding:6px 10px;border-radius:6px">
+                        <option>HOY</option>
+                        <option selected>ESTE MES</option>
+                        <option>ESTE AÑO</option>
+                        <option>TOTAL</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-container" style="max-height:450px;overflow-y:auto">
+                <table>
+                    <thead><tr><th>Rank</th><th>Producto</th><th>Unidades Vendidas</th><th>Ganancia Total</th><th># Transacciones</th><th>Margen %</th></tr></thead>
+                    <tbody id="tabla-estrella"></tbody>
+                </table>
+            </div>
+            <div class="btn-group"><button class="btn btn-warning" onclick="cargarEstrella()">🔄 Actualizar Ranking</button></div>
+        </div>
+
+        <!-- RECOMENDACIONES -->
+        <div class="tab-content" id="tab-recomendaciones">
+            <div class="card" style="border-color:#EF4444">
+                <div class="card-title" style="color:#EF4444">🚨 Alertas Críticas</div>
+                <div class="alert-box" id="alertas-box"></div>
+            </div>
+            <div class="card" style="border-color:#10B981">
+                <div class="card-title" style="color:#10B981">💡 Oportunidades de Inversión</div>
+                <div class="opportunity-box" id="opor-box"></div>
+            </div>
+            <div class="section-label">Análisis cruzado: Margen × Stock × Rotación</div>
+            <div class="table-container" style="max-height:350px;overflow-y:auto">
+                <table>
+                    <thead><tr><th>Producto</th><th>Stock</th><th>Margen %</th><th>Ventas 30d</th><th>Días Stock</th><th>Estado</th><th>Acción Sugerida</th></tr></thead>
+                    <tbody id="tabla-recomendaciones"></tbody>
+                </table>
+            </div>
+            <div class="btn-group"><button class="btn btn-primary" onclick="cargarRecomendaciones()">🤖 Generar Análisis Completo</button></div>
+        </div>
+
+        <div class="btn-group mt-2">
+            <button class="btn btn-ghost" onclick="ir('/dashboard.html')">← Volver</button>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+            event.target.classList.add("active");
+            document.getElementById("tab-" + tab).classList.add("active");
+            if (tab === "rendimiento") cargarRendimiento();
+            if (tab === "estrella") cargarEstrella();
+            if (tab === "recomendaciones") cargarRecomendaciones();
+        }
+
+        async function cargarRendimiento() {
+            const data = await get("/api/analisis/rendimiento");
+            const kpiDiv = document.getElementById("kpi-rendimiento");
+            const colores = { HOY: "#10B981", "ESTE MES": "#3B82F6", "ESTE AÑO": "#8B5CF6", TOTAL: "#F59E0B" };
+            kpiDiv.innerHTML = Object.entries(data.periodos).map(([k, v]) =>
+                `<div class="kpi-card" style="--accent:${colores[k]}"><div class="title">${k}</div><div class="value">${fmt(v.ganancia)}</div><div class="subtitle">${v.ventas} venta${v.ventas !== 1 ? 's' : ''}</div></div>`
+            ).join("");
+
+            const tbody = document.getElementById("tabla-rendimiento");
+            tbody.innerHTML = data.detalle.map(d =>
+                `<tr><td>${d.fecha}</td><td>${d.ventas}</td><td>${d.unidades}</td><td>${fmt(d.ganancia)}</td><td>${fmt(d.ticket_promedio)}</td></tr>`
+            ).join("");
+        }
+
+        async function cargarEstrella() {
+            const periodo = document.getElementById("periodo-estrella").value;
+            const data = await get("/api/analisis/productos_estrella?periodo=" + encodeURIComponent(periodo));
+            const medals = ["🥇", "🥈", "🥉"];
+            const tbody = document.getElementById("tabla-estrella");
+            tbody.innerHTML = data.map((p, i) => {
+                const medal = i < 3 ? medals[i] : (i + 1);
+                const cls = i === 0 ? "text-warning" : i === 1 ? "text-muted" : i === 2 ? "text-accent" : "";
+                return `<tr><td class="${cls}" style="font-weight:bold;font-size:16px">${medal}</td><td>${p.producto}</td><td>${p.unidades}</td><td>${fmt(p.ganancia_total)}</td><td>${p.transacciones}</td><td>${p.margen}%</td></tr>`;
+            }).join("") || '<tr><td colspan="6" class="text-muted">Sin datos</td></tr>';
+        }
+
+        async function cargarRecomendaciones() {
+            const data = await get("/api/analisis/recomendaciones");
+            document.getElementById("alertas-box").textContent = data.alertas.join("\n");
+            document.getElementById("opor-box").textContent = data.oportunidades.join("\n");
+
+            const tbody = document.getElementById("tabla-recomendaciones");
+            const estadoClases = {
+                "CRITICO": "alerta", "POR_AGOTAR": "alerta",
+                "ESTRELLA": "text-success", "ALTO_MARGEN": "text-accent",
+                "SIN_MOVIMIENTO": "text-muted", "ESTANCADO": "text-muted", "NORMAL": ""
+            };
+            tbody.innerHTML = data.analisis.map(a =>
+                `<tr class="${estadoClases[a.estado] || ''}"><td>${a.producto}</td><td>${a.stock}</td><td>${a.margen}%</td><td>${a.ventas_30d}</td><td>${a.dias_stock}</td><td>${a.estado}</td><td>${a.accion_sugerida}</td></tr>`
+            ).join("");
+        }
+
+        cargarRendimiento();
+    </script>
+</body>
+</html>

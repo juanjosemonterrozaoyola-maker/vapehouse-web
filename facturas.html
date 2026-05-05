@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VapeHouse — Facturas</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="brand">VAPEHOUSE <span>Control de Facturas</span></div>
+        <div class="user-info"><span>🧾 Registro y exportación de transacciones</span></div>
+    </div>
+
+    <div class="content">
+        <div class="table-container" style="max-height:500px;overflow-y:auto">
+            <table>
+                <thead><tr><th>ID</th><th>Fecha / Hora</th><th>Producto</th><th>Unidades</th><th>Total Venta</th></tr></thead>
+                <tbody id="tabla-facturas"></tbody>
+            </table>
+        </div>
+
+        <div class="btn-group mt-2">
+            <button class="btn btn-primary" onclick="exportarPDF()">📄 Exportar PDF</button>
+            <button class="btn btn-danger" onclick="resetFacturas()">🗑 Reset Facturas</button>
+            <button class="btn btn-ghost" onclick="ir('/dashboard.html')">← Volver</button>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        async function cargarFacturas() {
+            const datos = await get("/api/ventas?periodo=");
+            const tbody = document.getElementById("tabla-facturas");
+            tbody.innerHTML = datos.map((f, i) => `<tr style="background:${i % 2 === 0 ? '#141E30' : '#0F1826'}"><td>${f.id_venta}</td><td>${f.fecha}</td><td>${f.producto}</td><td>${f.unidades}</td><td>${fmt(f.ganancia)}</td></tr>`).join("") || '<tr><td colspan="5" class="text-muted">Sin facturas</td></tr>';
+        }
+
+        async function exportarPDF() {
+            const base64 = await get("/api/pdf/ventas?periodo=FACTURAS");
+            descargarPDF(base64, `Reporte_Facturas_${fechaDate().replace(/\//g, "_")}.pdf`);
+        }
+
+        async function resetFacturas() {
+            if (!confirmar("¿Eliminar todas las facturas registradas?")) return;
+            await del("/api/ventas");
+            cargarFacturas();
+            mostrar("Facturas eliminadas.", "success");
+        }
+
+        cargarFacturas();
+    </script>
+</body>
+</html>

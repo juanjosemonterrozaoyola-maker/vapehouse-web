@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VapeHouse — Contabilidad</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="brand">VAPEHOUSE <span>Reportes de Ventas</span></div>
+        <div class="user-info">
+            <span>📊 Historial completo de transacciones</span>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="nav-tabs" id="nav-tabs">
+            <button class="nav-tab active" data-tab="hoy" onclick="switchTab('hoy')">Hoy</button>
+            <button class="nav-tab" data-tab="semanal" onclick="switchTab('semanal')">Semanal</button>
+            <button class="nav-tab" data-tab="mes" onclick="switchTab('mes')">Mes Actual</button>
+            <button class="nav-tab" data-tab="anio" onclick="switchTab('anio')">Año Actual</button>
+            <button class="nav-tab" data-tab="general" onclick="switchTab('general')">General</button>
+        </div>
+
+        <div class="tab-content active" id="tab-hoy"></div>
+        <div class="tab-content" id="tab-semanal"></div>
+        <div class="tab-content" id="tab-mes"></div>
+        <div class="tab-content" id="tab-anio"></div>
+        <div class="tab-content" id="tab-general"></div>
+
+        <div class="btn-group mt-2">
+            <button class="btn btn-ghost" onclick="ir('/dashboard.html')">← Volver</button>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        const periodos = { hoy: "HOY", semanal: "SEMANAL", mes: "MES ACTUAL", anio: "AÑO ACTUAL", general: "" };
+        let cache = {};
+
+        async function switchTab(tab) {
+            document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
+            document.querySelector(`.nav-tab[data-tab="${tab}"]`).classList.add("active");
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+            document.getElementById("tab-" + tab).classList.add("active");
+
+            if (!cache[tab]) {
+                cache[tab] = await get("/api/ventas?periodo=" + encodeURIComponent(periodos[tab]));
+            }
+            renderTab(tab);
+        }
+
+        function renderTab(tab) {
+            const ventas = cache[tab] || [];
+            let total = ventas.reduce((s, v) => s + (v.ganancia || 0), 0);
+
+            const container = document.getElementById("tab-" + tab);
+            container.innerHTML = `
+                <div class="flex-between mb-2">
+                    <h2 class="text-success" style="font-size:24px">Total ${document.querySelector(`.nav-tab[data-tab="${tab}"]`).textContent}: ${fmt(total)}</h2>
+                    <div class="btn-group" style="margin:0">
+                        <button class="btn btn-primary" onclick="exportarPDF('${periodos[tab] || "GENERAL"}')">📄 Exportar PDF</button>
+                        <button class="btn btn-danger" onclick="resetVentas('${periodos[tab] || "GENERAL"}')">🗑 Resetear</button>
+                    </div>
+                </div>
+                <div class="table-container" style="max-height:500px;overflow-y:auto">
+                    <table>
+                        <thead><tr><th>ID</th><th>Fecha</th><th>Producto</th><th>Unidades</th><th>Ganancia</th></tr></thead>
+                        <tbody>
+                            ${ventas.map(v => `<tr><td>${v.id_venta}</td><td>${v.fecha}</td><td>${v.producto}</td><td>${v.unidades}</td><td>${fmt(v.ganancia)}</td></tr>`).join("") || '<tr><td colspan="5" class="text-muted">Sin datos</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function exportarPDF(periodo) {
+            const base64 = await get("/api/pdf/ventas?periodo=" + encodeURIComponent(periodo));
+            descargarPDF(base64, `Reporte_Ventas_${periodo}_${fechaDate().replace(/\//g, "_")}.pdf`);
+        }
+
+        async function resetVentas(periodo) {
+            if (!confirmar("¿Eliminar todas las ventas del periodo: " + periodo + "?")) return;
+            await del("/api/ventas?periodo=" + encodeURIComponent(periodo));
+            cache = {};
+            const tab = document.querySelector(".nav-tab.active").dataset.tab;
+            switchTab(tab);
+        }
+
+        switchTab("hoy");
+    </script>
+</body>
+</html>

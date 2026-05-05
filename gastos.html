@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VapeHouse — Gasto / Ganancia</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="brand">VAPEHOUSE <span>Control financiero del negocio</span></div>
+        <div class="user-info"><span>💰 Gasto / Ganancia</span></div>
+    </div>
+
+    <div class="content">
+        <div class="card">
+            <div class="card-title">➕ Registrar Nuevo Gasto o Inversión</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Concepto</label>
+                    <input type="text" id="concepto" placeholder="Ej: Compra de stock">
+                </div>
+                <div class="form-group">
+                    <label>Monto ($)</label>
+                    <input type="number" id="monto" step="0.01" placeholder="0.00">
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-warning" onclick="registrarGasto()">Registrar Gasto</button>
+            </div>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card" style="--accent: #3B82F6">
+                <div class="title">Ganancia Bruta</div>
+                <div class="value" id="kpi-ganancia">$0.00</div>
+                <div class="subtitle" id="kpi-ganancia-periodo">—</div>
+            </div>
+            <div class="kpi-card" style="--accent: #EF4444">
+                <div class="title">Gastos</div>
+                <div class="value" id="kpi-gastos">$0.00</div>
+                <div class="subtitle" id="kpi-gastos-periodo">—</div>
+            </div>
+            <div class="kpi-card" style="--accent: #10B981">
+                <div class="title">Utilidad Neta</div>
+                <div class="value" id="kpi-utilidad">$0.00</div>
+                <div class="subtitle" id="kpi-utilidad-periodo">—</div>
+            </div>
+        </div>
+
+        <div class="section-label">Filtrar por periodo</div>
+        <div class="periodo-group mb-2">
+            <button class="periodo-btn active" onclick="cambiarPeriodo('HOY')">HOY</button>
+            <button class="periodo-btn" onclick="cambiarPeriodo('SEMANAL')">SEMANAL</button>
+            <button class="periodo-btn" onclick="cambiarPeriodo('MENSUAL')">MENSUAL</button>
+            <button class="periodo-btn" onclick="cambiarPeriodo('ANUAL')">ANUAL</button>
+            <button class="periodo-btn" onclick="cambiarPeriodo('TOTAL')">TOTAL</button>
+        </div>
+
+        <div class="section-label">Detalle de gastos del periodo</div>
+        <div class="table-container" style="max-height:350px;overflow-y:auto">
+            <table>
+                <thead><tr><th>ID</th><th>Fecha</th><th>Concepto</th><th>Monto</th></tr></thead>
+                <tbody id="tabla-gastos"></tbody>
+            </table>
+        </div>
+
+        <div class="btn-group mt-2">
+            <button class="btn btn-primary" onclick="exportarBalance()">📄 Imprimir Balance PDF</button>
+            <button class="btn btn-danger" onclick="resetGastos()">⟳ Reset Gastos</button>
+            <button class="btn btn-ghost" onclick="ir('/dashboard.html')">← Volver</button>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let periodoActual = "HOY";
+        let datosBalance = { filas: [], ganancia: 0, gastos: 0 };
+
+        async function cambiarPeriodo(periodo) {
+            periodoActual = periodo;
+            document.querySelectorAll(".periodo-btn").forEach(b => b.classList.remove("active"));
+            event.target.classList.add("active");
+            await cargarDatos();
+        }
+
+        async function cargarDatos() {
+            const resumen = await get("/api/resumen?periodo=" + encodeURIComponent(periodoActual));
+            const gastos = await get("/api/gastos?periodo=" + encodeURIComponent(periodoActual));
+
+            document.getElementById("kpi-ganancia").textContent = fmt(resumen.ganancia_bruta);
+            document.getElementById("kpi-ganancia-periodo").textContent = `(${periodoActual})`;
+            document.getElementById("kpi-gastos").textContent = fmt(resumen.gastos);
+            document.getElementById("kpi-gastos-periodo").textContent = `(${periodoActual})`;
+            const utilidad = resumen.ganancia_bruta - resumen.gastos;
+            document.getElementById("kpi-utilidad").textContent = fmt(utilidad);
+            document.getElementById("kpi-utilidad").style.color = utilidad >= 0 ? "#10B981" : "#EF4444";
+            document.getElementById("kpi-utilidad-periodo").textContent = `(${periodoActual})`;
+
+            datosBalance = { filas: gastos, ganancia: resumen.ganancia_bruta, gastos: resumen.gastos };
+            const tbody = document.getElementById("tabla-gastos");
+            tbody.innerHTML = gastos.map((g, i) => `<tr style="background:${i % 2 === 0 ? '#141E30' : '#0F1826'}"><td>${g.id_gasto}</td><td>${g.fecha}</td><td>${g.concepto}</td><td>${fmt(g.monto)}</td></tr>`).join("") || '<tr><td colspan="4" class="text-muted">Sin gastos</td></tr>';
+        }
+
+        async function registrarGasto() {
+            const concepto = document.getElementById("concepto").value.trim();
+            const monto = parseFloat(document.getElementById("monto").value);
+            if (!concepto || isNaN(monto)) return mostrar("Verifica los datos.", "error");
+
+            await post("/api/gastos", { concepto, monto });
+            document.getElementById("concepto").value = "";
+            document.getElementById("monto").value = "";
+            mostrar("Gasto registrado.", "success");
+            cargarDatos();
+        }
+
+        async function resetGastos() {
+            if (!confirmar("¿Limpiar gastos del periodo: " + periodoActual + "?")) return;
+            await del("/api/gastos?periodo=" + encodeURIComponent(periodoActual));
+            cargarDatos();
+        }
+
+        async function exportarBalance() {
+            alert("Balance:\n\nGanancia Bruta: " + fmt(datosBalance.ganancia) + "\nGastos: " + fmt(datosBalance.gastos) + "\nUtilidad: " + fmt(datosBalance.ganancia - datosBalance.gastos));
+        }
+
+        cargarDatos();
+    </script>
+</body>
+</html>

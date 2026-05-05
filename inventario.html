@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VapeHouse — Inventario</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="brand">VAPEHOUSE <span>Gestión de Inventario</span></div>
+        <div class="user-info">
+            <span>📦 Control de stock en tiempo real</span>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="search-bar">
+            <span style="font-size:18px">🔍</span>
+            <input type="text" id="buscar" placeholder="Buscar por nombre o categoría..." oninput="cargarProductos()">
+        </div>
+
+        <div class="card">
+            <div class="card-title">➕ Agregar / Actualizar Producto</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <select id="cat">
+                        <option value="Vapers">Vapers</option>
+                        <option value="Esencias">Esencias</option>
+                        <option value="Destilados">Destilados</option>
+                        <option value="Relojes">Relojes</option>
+                        <option value="Perfumes">Perfumes</option>
+                        <option value="Gorras">Gorras</option>
+                        <option value="Camisetas">Camisetas</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Nombre del producto</label>
+                    <input type="text" id="nombre" placeholder="Ej: Vape X">
+                </div>
+                <div class="form-group">
+                    <label>Costo ($)</label>
+                    <input type="number" id="costo" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Precio de venta ($)</label>
+                    <input type="number" id="venta" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Unidades en stock</label>
+                    <input type="number" id="stock" placeholder="0">
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="guardarProducto()">Guardar Producto</button>
+            </div>
+        </div>
+
+        <p class="text-warning text-sm mb-1">⚠ Productos con 3 o menos unidades aparecen resaltados en rojo</p>
+
+        <div class="section-label">Productos en inventario</div>
+
+        <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="cursor:pointer" onclick="toggleSelectAll()"><input type="checkbox" id="check-all"></th>
+                        <th>ID</th>
+                        <th>Categoría</th>
+                        <th>Nombre</th>
+                        <th>Costo</th>
+                        <th>Precio Venta</th>
+                        <th>Stock</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-productos"></tbody>
+            </table>
+        </div>
+
+        <div class="btn-group mt-2">
+            <button class="btn btn-success" onclick="vender()">💰 Vender</button>
+            <button class="btn btn-ghost" onclick="ir('/historial.html')">📋 Historial</button>
+            <button class="btn btn-primary" onclick="ir('/facturas.html')">🧾 Facturas</button>
+            <button class="btn btn-danger" onclick="eliminarProductos()">🗑 Eliminar</button>
+            <button class="btn btn-ghost" onclick="ir('/dashboard.html')">← Volver</button>
+        </div>
+    </div>
+
+    <!-- Modal Cliente -->
+    <div class="modal-overlay" id="modal-cliente">
+        <div class="modal">
+            <h2>👤 Datos del Cliente</h2>
+            <p class="text-muted text-sm mb-2" id="venta-info"></p>
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="cli-nombre">
+            </div>
+            <div class="form-group">
+                <label>Apellido</label>
+                <input type="text" id="cli-apellido">
+            </div>
+            <div class="form-group">
+                <label>Cédula / ID</label>
+                <input type="text" id="cli-cedula">
+            </div>
+            <div class="form-group">
+                <label>Teléfono</label>
+                <input type="text" id="cli-telefono">
+            </div>
+            <div class="form-group">
+                <label>Correo electrónico</label>
+                <input type="email" id="cli-correo">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="confirmarVenta()">✅ Confirmar Venta</button>
+                <button class="btn btn-danger" onclick="cerrarModal()">✖ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let productos = [];
+        let ventaPendiente = null;
+
+        async function cargarProductos() {
+            const filtro = document.getElementById("buscar").value;
+            productos = await get("/api/productos?filtro=" + encodeURIComponent(filtro));
+            renderTabla();
+        }
+
+        function renderTabla() {
+            const tbody = document.getElementById("tabla-productos");
+            tbody.innerHTML = "";
+            productos.forEach(p => {
+                const tr = document.createElement("tr");
+                if (p.cantidad <= 3) tr.className = "alerta";
+                tr.innerHTML = `
+                    <td><input type="checkbox" data-id="${p.id}"></td>
+                    <td>${p.id}</td>
+                    <td>${p.categoria}</td>
+                    <td>${p.nombre}</td>
+                    <td>${fmt(p.costo)}</td>
+                    <td>${fmt(p.venta)}</td>
+                    <td>${p.cantidad}</td>
+                `;
+                tr.addEventListener("click", function(e) {
+                    if (e.target.tagName !== "INPUT") {
+                        this.classList.toggle("selected");
+                        const cb = this.querySelector("input[type=checkbox]");
+                        cb.checked = !cb.checked;
+                    }
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function toggleSelectAll() {
+            const checkAll = document.getElementById("check-all").checked;
+            document.querySelectorAll("#tabla-productos input[type=checkbox]").forEach(cb => cb.checked = checkAll);
+        }
+
+        async function guardarProducto() {
+            const cat = document.getElementById("cat").value;
+            const nom = document.getElementById("nombre").value.trim();
+            const cos = parseFloat(document.getElementById("costo").value);
+            const ven = parseFloat(document.getElementById("venta").value);
+            const sto = parseInt(document.getElementById("stock").value);
+
+            if (!nom || isNaN(cos) || isNaN(ven) || isNaN(sto)) {
+                return mostrar("Verifica los datos ingresados.", "error");
+            }
+
+            const existente = productos.find(p => p.nombre.toLowerCase() === nom.toLowerCase());
+            if (existente) {
+                if (!confirmar(`¿Sumar ${sto} unidades a '${nom}'?`)) return;
+                const nuevoStock = existente.cantidad + sto;
+                await put("/api/productos/" + existente.id, {
+                    categoria: cat, nombre: nom, costo: cos, venta: ven, cantidad: nuevoStock
+                });
+            } else {
+                await post("/api/productos", { categoria: cat, nombre: nom, costo: cos, venta: ven, cantidad: sto });
+            }
+
+            limpiarForm();
+            cargarProductos();
+            mostrar("Producto guardado correctamente.", "success");
+        }
+
+        function limpiarForm() {
+            ["nombre", "costo", "venta", "stock"].forEach(id => document.getElementById(id).value = "");
+        }
+
+        function getSeleccionados() {
+            return Array.from(document.querySelectorAll("#tabla-productos input:checked"))
+                .map(cb => {
+                    const id = parseInt(cb.dataset.id);
+                    return productos.find(p => p.id === id);
+                }).filter(Boolean);
+        }
+
+        async function vender() {
+            const sel = getSeleccionados();
+            if (sel.length === 0) return mostrar("Selecciona al menos un producto.", "warning");
+
+            const prod = sel[0];
+            const cant = parseInt(prompt("¿Cuántas unidades deseas vender?", "1"));
+            if (!cant || cant < 1) return;
+            if (cant > prod.cantidad) return mostrar("No hay suficiente stock.", "warning");
+
+            ventaPendiente = prod;
+            ventaPendiente.cantidadVender = cant;
+
+            document.getElementById("venta-info").textContent = `${prod.nombre} — Cant: ${cant} — Total: ${fmt(prod.venta * cant)}`;
+            document.getElementById("modal-cliente").classList.add("active");
+        }
+
+        async function confirmarVenta() {
+            const nombre = document.getElementById("cli-nombre").value.trim();
+            const apellido = document.getElementById("cli-apellido").value.trim();
+            const cedula = document.getElementById("cli-cedula").value.trim();
+
+            if (!nombre || !apellido || !cedula) {
+                return mostrar("Nombre, apellido y cédula son obligatorios.", "error");
+            }
+
+            const p = ventaPendiente;
+            const total = p.venta * p.cantidadVender;
+            const ganancia = (p.venta - p.costo) * p.cantidadVender;
+            const nuevoStock = p.cantidad - p.cantidadVender;
+
+            await put("/api/productos/" + p.id, {
+                categoria: p.categoria, nombre: p.nombre, costo: p.costo, venta: p.venta, cantidad: nuevoStock
+            });
+
+            const ventaRes = await post("/api/ventas", {
+                fecha: fechaNow(), producto: p.nombre, unidades: p.cantidadVender, ganancia: ganancia
+            });
+
+            const facturaRes = await post("/api/pdf/factura", {
+                nombre, apellido, cedula,
+                telefono: document.getElementById("cli-telefono").value,
+                correo: document.getElementById("cli-correo").value,
+                producto: p.nombre, cantidad: p.cantidadVender, precio_unit: p.venta, total_venta: total,
+                id_venta: ventaRes.id_venta
+            });
+
+            descargarPDF(facturaRes, `Factura_${String(ventaRes.id_venta).padStart(5, '0')}_${cedula}.pdf`);
+
+            cerrarModal();
+            cargarProductos();
+            mostrar("Venta registrada correctamente.", "success");
+        }
+
+        function cerrarModal() {
+            document.getElementById("modal-cliente").classList.remove("active");
+            ["cli-nombre", "cli-apellido", "cli-cedula", "cli-telefono", "cli-correo"].forEach(id => document.getElementById(id).value = "");
+        }
+
+        async function eliminarProductos() {
+            const sel = getSeleccionados();
+            if (sel.length === 0) return mostrar("Selecciona productos para eliminar.", "warning");
+            if (!confirmar("¿Eliminar los productos seleccionados?")) return;
+
+            for (const p of sel) {
+                await del("/api/productos/" + p.id);
+            }
+            cargarProductos();
+            mostrar("Productos eliminados.", "success");
+        }
+
+        cargarProductos();
+    </script>
+</body>
+</html>

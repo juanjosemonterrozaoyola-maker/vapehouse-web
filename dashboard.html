@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VapeHouse — Panel</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .dashboard {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 0 24px;
+            flex: 1;
+        }
+        .menu-card {
+            background: #1C2537;
+            border: 1px solid #1E3050;
+            border-radius: 12px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-top: 4px solid var(--accent);
+        }
+        .menu-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        .menu-card .icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        .menu-card .title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #F0F4FF;
+            margin-bottom: 4px;
+        }
+        .menu-card .desc {
+            font-size: 12px;
+            color: #7A8BA8;
+        }
+        .menu-card .btn-abrir {
+            display: inline-block;
+            margin-top: 14px;
+            padding: 8px 20px;
+            background: transparent;
+            color: #A8B8D0;
+            border: 1px solid #1E3050;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .menu-card:hover .btn-abrir {
+            background: #3B82F6;
+            color: #F0F4FF;
+            border-color: #3B82F6;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <div class="brand">VAPEHOUSE <span>SISTEMA DE GESTIÓN EMPRESARIAL</span></div>
+            <div class="user-info">
+                <span id="fecha"></span>
+                <button class="btn-volver" onclick="window.location.href='/'">Cerrar Sesión</button>
+            </div>
+        </div>
+
+        <div class="menu-grid">
+            <div class="menu-card" style="--accent: #10B981" onclick="ir('/inventario.html')">
+                <div class="icon">📦</div>
+                <div class="title">Inventario</div>
+                <div class="desc">Stock y productos</div>
+                <div class="btn-abrir">Abrir →</div>
+            </div>
+            <div class="menu-card" style="--accent: #3B82F6" onclick="ir('/contabilidad.html')">
+                <div class="icon">📊</div>
+                <div class="title">Contabilidad</div>
+                <div class="desc">Reportes de ventas</div>
+                <div class="btn-abrir">Abrir →</div>
+            </div>
+            <div class="menu-card" style="--accent: #F59E0B" onclick="ir('/gastos.html')">
+                <div class="icon">💰</div>
+                <div class="title">Gasto / Ganancia</div>
+                <div class="desc">Control financiero</div>
+                <div class="btn-abrir">Abrir →</div>
+            </div>
+            <div class="menu-card" style="--accent: #8B5CF6" onclick="ir('/analisis_bi.html')">
+                <div class="icon">🧠</div>
+                <div class="title">Análisis BI</div>
+                <div class="desc">Inteligencia de negocios</div>
+                <div class="btn-abrir">Abrir →</div>
+            </div>
+        </div>
+
+        <div class="bottom-bar">
+            <span class="text-muted text-sm">VapeHouse v2.0 — Sistema Empresarial</span>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+        document.getElementById("fecha").textContent = hoy.charAt(0).toUpperCase() + hoy.slice(1);
+    </script>
+</body>
+</html>
