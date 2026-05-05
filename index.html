@@ -4,87 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VapeHouse — Acceso</title>
-    <link rel="stylesheet" href="/css/style.css">
     <style>
-        .login-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: #0B1120;
-        }
-        .login-card {
-            background: #111827;
-            border-radius: 16px;
-            padding: 40px;
-            width: 400px;
-            border: 1px solid #1E3050;
-            text-align: center;
-        }
-        .login-card h1 {
-            font-size: 32px;
-            margin-bottom: 4px;
-        }
-        .login-card .subtitle {
-            color: #7A8BA8;
-            font-size: 11px;
-            margin-bottom: 24px;
-        }
-        .login-card .accent-line {
-            height: 2px;
-            background: #3B82F6;
-            margin: 20px 0;
-        }
-        .login-card .form-group {
-            margin-bottom: 14px;
-            text-align: left;
-        }
-        .login-card .form-group label {
-            font-size: 12px;
-            color: #7A8BA8;
-            margin-bottom: 4px;
-            display: block;
-        }
-        .login-card .form-group input {
-            width: 100%;
-            background: #1C2537;
-            border: 1px solid #1E3050;
-            color: #F0F4FF;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            outline: none;
-        }
-        .login-card .form-group input:focus {
-            border-color: #3B82F6;
-        }
-        .login-card .btn-login {
-            width: 100%;
-            padding: 12px;
-            background: #3B82F6;
-            color: #F0F4FF;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: background 0.2s;
-        }
-        .login-card .btn-login:hover {
-            background: #2563EB;
-        }
-        .login-card .footer {
-            color: #7A8BA8;
-            font-size: 11px;
-            margin-top: 24px;
-        }
-        .error-msg {
-            color: #EF4444;
-            font-size: 13px;
-            display: none;
-            margin-top: 8px;
-        }
+        body { margin: 0; font-family: "Segoe UI", sans-serif; background: #0B1120; color: #F0F4FF; }
+        .login-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .login-card { background: #111827; border-radius: 16px; padding: 40px; width: 400px; border: 1px solid #1E3050; text-align: center; }
+        .login-card h1 { font-size: 32px; margin-bottom: 4px; }
+        .login-card .subtitle { color: #7A8BA8; font-size: 11px; margin-bottom: 24px; }
+        .login-card .accent-line { height: 2px; background: #3B82F6; margin: 20px 0; }
+        .login-card .form-group { margin-bottom: 14px; text-align: left; }
+        .login-card .form-group label { font-size: 12px; color: #7A8BA8; margin-bottom: 4px; display: block; }
+        .login-card .form-group input { width: 100%; background: #1C2537; border: 1px solid #1E3050; color: #F0F4FF; padding: 12px; border-radius: 6px; font-size: 14px; outline: none; }
+        .login-card .form-group input:focus { border-color: #3B82F6; }
+        .login-card .btn-login { width: 100%; padding: 12px; background: #3B82F6; color: #F0F4FF; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
+        .login-card .btn-login:hover { background: #2563EB; }
+        .login-card .footer { color: #7A8BA8; font-size: 11px; margin-top: 24px; }
+        .error-msg { color: #EF4444; font-size: 13px; display: none; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -110,8 +44,24 @@
         </div>
     </div>
 
-    <script src="/js/api.js"></script>
     <script>
+        async function api(url, options = {}) {
+            const res = await fetch(url, {
+                headers: { "Content-Type": "application/json" },
+                method: options.method || "GET",
+                body: options.body ? JSON.stringify(options.body) : null,
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: "Error" }));
+                throw new Error(err.detail || "Error en la solicitud");
+            }
+            return res.json();
+        }
+
+        function post(url, data) {
+            return api(url, { method: "POST", body: data });
+        }
+
         document.getElementById("clave").addEventListener("keydown", function(e) {
             if (e.key === "Enter") login();
         });
@@ -120,15 +70,16 @@
         });
 
         async function login() {
-                const usuario = document.getElementById("usuario").value.trim();
-                const clave = document.getElementById("clave").value.trim();
+            const usuario = document.getElementById("usuario").value.trim();
+            const clave = document.getElementById("clave").value.trim();
             try {
                 const res = await post("/api/login", { usuario, clave });
                 if (res.status === "ok") {
                     window.location.href = "/dashboard.html";
                 }
             } catch (e) {
-                alert("ERROR AL ENTRAR: " + e.message);
+                alert("ERROR: " + e.message);
+            }
         }
     </script>
 </body>
