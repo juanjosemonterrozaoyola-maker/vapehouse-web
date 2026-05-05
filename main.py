@@ -166,8 +166,8 @@ def get_ventas(periodo: Optional[str] = ""):
         fecha_like = f"%/%/{hoy.strftime('%Y')}%"
         response = supabase.table("ventas").select("*").ilike("fecha", fecha_like).execute()
     else:
-        response = supabase.table("ventas").select("*").order("id_venta").execute()
-    return response.data
+        supabase.table("ventas").delete().gt("id_venta", 0).execute()
+    return {"status": "ok"}
 
 @app.post("/api/ventas")
 def crear_venta(v: Venta):
@@ -220,7 +220,7 @@ def get_historial():
 
 @app.delete("/api/historial")
 def limpiar_historial():
-    supabase.table("historial").delete().execute()
+    supabase.table("historial").delete().gt("id_mov", 0).execute()
     return {"status": "ok"}
 
 # ==========================================
@@ -244,8 +244,8 @@ def get_gastos(periodo: Optional[str] = "HOY"):
         fecha_like = f"%/%/{hoy.strftime('%Y')}%"
         response = supabase.table("gastos").select("*").ilike("fecha", fecha_like).execute()
     else:
-        response = supabase.table("gastos").select("*").execute()
-    return response.data
+        supabase.table("gastos").delete().gt("id_gasto", 0).execute()
+    return {"status": "ok"}
 
 @app.post("/api/gastos")
 def crear_gasto(g: Gasto):
