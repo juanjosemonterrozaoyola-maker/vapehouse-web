@@ -128,8 +128,8 @@
                     window.location.href = "/dashboard.html";
                 }
             } catch (e) {
-                document.getElementById("error-msg").style.display = "block";
-            }
+            document.getElementById("error-msg").innerText = e.message;
+            document.getElementById("error-msg").style.display = "block";
         }
     </script>
 </body>
