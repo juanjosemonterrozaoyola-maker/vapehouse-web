@@ -120,9 +120,8 @@
         });
 
         async function login() {
-            const usuario = document.getElementById("usuario").value;
-            const clave = document.getElementById("clave").value;
-
+                const usuario = document.getElementById("usuario").value.trim();
+                const clave = document.getElementById("clave").value.trim();
             try {
                 const res = await post("/api/login", { usuario, clave });
                 if (res.status === "ok") {
