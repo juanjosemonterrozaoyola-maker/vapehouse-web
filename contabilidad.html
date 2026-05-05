@@ -4,22 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VapeHouse — Contabilidad</title>
-    <link rel="stylesheet" href="/css/style.css">
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Segoe UI", sans-serif; background: #0B1120; color: #F0F4FF; min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background: #111827; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #3B82F6; }
+        .header .brand { font-size: 24px; font-weight: bold; color: #F0F4FF; }
+        .header .brand span { color: #7A8BA8; font-size: 11px; display: block; font-weight: normal; }
+        .btn-volver { background: #1E293B; color: #7A8BA8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
+        .content { padding: 20px 28px; flex: 1; }
+        .nav-tabs { background: #111827; padding: 8px 28px; display: flex; gap: 4px; }
+        .nav-tab { padding: 10px 18px; background: #1C2537; color: #7A8BA8; border: none; cursor: pointer; font-size: 13px; font-weight: bold; border-radius: 6px 6px 0 0; }
+        .nav-tab.active, .nav-tab:hover { background: #3B82F6; color: #F0F4FF; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .table-container { overflow-x: auto; border: 1px solid #1E3050; border-radius: 8px; margin: 8px 0; max-height: 500px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th { background: #1C2537; color: #60A5FA; padding: 10px 14px; text-align: center; font-weight: bold; position: sticky; top: 0; }
+        tbody tr { background: #141E30; }
+        tbody tr:nth-child(even) { background: #0F1826; }
+        tbody td { padding: 8px 14px; text-align: center; border-bottom: 1px solid #1E3050; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
+        .btn-danger { background: #EF4444; color: #F0F4FF; }
+        .btn-group { display: flex; gap: 8px; margin-top: 12px; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .text-success { color: #10B981; }
+        .text-muted { color: #7A8BA8; }
+        h2 { font-size: 20px; }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="brand">VAPEHOUSE <span>Reportes de Ventas</span></div>
-        <div class="user-info">
-            <span>📊 Historial completo de transacciones</span>
-        </div>
+        <button class="btn-volver" onclick="window.location.href='/dashboard.html'">← Volver</button>
     </div>
 
     <div class="content">
-        <div class="nav-tabs" id="nav-tabs">
+        <div class="nav-tabs">
             <button class="nav-tab active" data-tab="hoy" onclick="switchTab('hoy')">Hoy</button>
             <button class="nav-tab" data-tab="semanal" onclick="switchTab('semanal')">Semanal</button>
             <button class="nav-tab" data-tab="mes" onclick="switchTab('mes')">Mes Actual</button>
@@ -27,19 +47,24 @@
             <button class="nav-tab" data-tab="general" onclick="switchTab('general')">General</button>
         </div>
 
-        <div class="tab-content active" id="tab-hoy"></div>
-        <div class="tab-content" id="tab-semanal"></div>
-        <div class="tab-content" id="tab-mes"></div>
-        <div class="tab-content" id="tab-anio"></div>
-        <div class="tab-content" id="tab-general"></div>
-
-        <div class="btn-group mt-2">
-            <button class="btn btn-ghost" onclick="ir('/dashboard.html')">← Volver</button>
-        </div>
+        <div id="tab-hoy" class="tab-content active"></div>
+        <div id="tab-semanal" class="tab-content"></div>
+        <div id="tab-mes" class="tab-content"></div>
+        <div id="tab-anio" class="tab-content"></div>
+        <div id="tab-general" class="tab-content"></div>
     </div>
 
-    <script src="/js/api.js"></script>
     <script>
+        async function api(url, options = {}) {
+            const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
+            if (!res.ok) { const err = await res.json().catch(() => ({ detail: "Error" })); throw new Error(err.detail || "Error"); }
+            return res.json();
+        }
+        function get(url) { return api(url); }
+        function del(url) { return api(url, { method: "DELETE" }); }
+        function fmt(n) { return "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function confirmar(msg) { return confirm(msg); }
+
         const periodos = { hoy: "HOY", semanal: "SEMANAL", mes: "MES ACTUAL", anio: "AÑO ACTUAL", general: "" };
         let cache = {};
 
@@ -48,48 +73,31 @@
             document.querySelector(`.nav-tab[data-tab="${tab}"]`).classList.add("active");
             document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
             document.getElementById("tab-" + tab).classList.add("active");
-
-            if (!cache[tab]) {
-                cache[tab] = await get("/api/ventas?periodo=" + encodeURIComponent(periodos[tab]));
-            }
+            if (!cache[tab]) cache[tab] = await get("/api/ventas?periodo=" + periodos[tab]);
             renderTab(tab);
         }
 
         function renderTab(tab) {
             const ventas = cache[tab] || [];
-            let total = ventas.reduce((s, v) => s + (v.ganancia || 0), 0);
-
-            const container = document.getElementById("tab-" + tab);
-            container.innerHTML = `
-                <div class="flex-between mb-2">
-                    <h2 class="text-success" style="font-size:24px">Total ${document.querySelector(`.nav-tab[data-tab="${tab}"]`).textContent}: ${fmt(total)}</h2>
-                    <div class="btn-group" style="margin:0">
-                        <button class="btn btn-primary" onclick="exportarPDF('${periodos[tab] || "GENERAL"}')">📄 Exportar PDF</button>
-                        <button class="btn btn-danger" onclick="resetVentas('${periodos[tab] || "GENERAL"}')">🗑 Resetear</button>
-                    </div>
+            const total = ventas.reduce((s, v) => s + (v.ganancia || 0), 0);
+            document.getElementById("tab-" + tab).innerHTML = `
+                <div class="flex-between" style="margin:12px 0">
+                    <h2 class="text-success">Total: ${fmt(total)}</h2>
+                    <button class="btn btn-danger" onclick="resetVentas('${periodos[tab] || "GENERAL"}')">🗑 Resetear</button>
                 </div>
-                <div class="table-container" style="max-height:500px;overflow-y:auto">
+                <div class="table-container">
                     <table>
                         <thead><tr><th>ID</th><th>Fecha</th><th>Producto</th><th>Unidades</th><th>Ganancia</th></tr></thead>
-                        <tbody>
-                            ${ventas.map(v => `<tr><td>${v.id_venta}</td><td>${v.fecha}</td><td>${v.producto}</td><td>${v.unidades}</td><td>${fmt(v.ganancia)}</td></tr>`).join("") || '<tr><td colspan="5" class="text-muted">Sin datos</td></tr>'}
-                        </tbody>
+                        <tbody>${ventas.map(v => `<tr><td>${v.id_venta}</td><td>${v.fecha}</td><td>${v.producto}</td><td>${v.unidades}</td><td>${fmt(v.ganancia)}</td></tr>`).join("") || '<tr><td colspan="5" class="text-muted">Sin datos</td></tr>'}</tbody>
                     </table>
-                </div>
-            `;
+                </div>`;
         }
 
-        async function exportarPDF(periodo) {
-            const base64 = await get("/api/pdf/ventas?periodo=" + encodeURIComponent(periodo));
-            descargarPDF(base64, `Reporte_Ventas_${periodo}_${fechaDate().replace(/\//g, "_")}.pdf`);
-        }
-
-        async function resetVentas(periodo) {
-            if (!confirmar("¿Eliminar todas las ventas del periodo: " + periodo + "?")) return;
-            await del("/api/ventas?periodo=" + encodeURIComponent(periodo));
+        async function resetVentas(p) {
+            if (!confirmar("¿Eliminar ventas de " + p + "?")) return;
+            await del("/api/ventas?periodo=" + p);
             cache = {};
-            const tab = document.querySelector(".nav-tab.active").dataset.tab;
-            switchTab(tab);
+            switchTab(document.querySelector(".nav-tab.active").getAttribute("data-tab"));
         }
 
         switchTab("hoy");
