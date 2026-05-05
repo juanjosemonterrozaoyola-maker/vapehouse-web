@@ -128,8 +128,7 @@
                     window.location.href = "/dashboard.html";
                 }
             } catch (e) {
-            document.getElementById("error-msg").innerText = e.message;
-            document.getElementById("error-msg").style.display = "block";
+                alert("ERROR AL ENTRAR: " + e.message);
         }
     </script>
 </body>
