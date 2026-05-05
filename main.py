@@ -621,7 +621,7 @@ def migrar_desde_sqlite():
 # SERVE STATIC
 # ==========================================
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
