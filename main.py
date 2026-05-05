@@ -78,7 +78,7 @@ class ClienteFactura(BaseModel):
 
 @app.post("/api/login")
 def login(req: LoginRequest):
-    if req.usuario == os.getenv("USUARIO_CORRECTO") and req.clave == os.getenv("CLAVE_CORRECTA"):
+            if req.usuario == "admin" and req.clave == "admin":
         return {"status": "ok", "token": "vapehouse_session"}
     raise HTTPException(status_code=401, detail="Acceso denegado")
 
