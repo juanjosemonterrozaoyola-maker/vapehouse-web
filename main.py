@@ -80,7 +80,8 @@ class ClienteFactura(BaseModel):
 def login(req: LoginRequest):
     if req.usuario == "admin" and req.clave == "admin":
         return {"status": "ok", "token": "vapehouse_session"}
-    raise HTTPException(status_code=401, detail="Acceso denegado")
+    # Si falla, nos dice qué recibió exactamente:
+    raise HTTPException(status_code=401, detail=f"Recibido: usuario='{req.usuario}', clave='{req.clave}'")
     
 # ==========================================
 # PRODUCTOS
